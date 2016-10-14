@@ -5,37 +5,35 @@ MyCustomChart = function() {
     // Public Variables with Default Settings
     //------------------------------------------------------------
 
-    var lines = nv.models.line()
-    , lines2 = nv.models.line()
-    , xAxis = nv.models.axis()
-    , yAxis = nv.models.axis()
-    , x2Axis = nv.models.axis()
-    , y2Axis = nv.models.axis()
-    , legend = nv.models.legend()
-    , brush = d3.svg.brush()
-    , tooltip = nv.models.tooltip()
-    , interactiveLayer = nv.interactiveGuideline()
-    ;
+    var lines = nv.models.line(),
+	lines2 = nv.models.line(),
+	xAxis = nv.models.axis(),
+	yAxis = nv.models.axis(),
+	x2Axis = nv.models.axis(),
+	y2Axis = nv.models.axis(),
+	legend = nv.models.legend(),
+	brush = d3.svg.brush(),
+	tooltip = nv.models.tooltip(),
+	interactiveLayer = nv.interactiveGuideline();
 
-    var margin = {top: 30, right: 30, bottom: 30, left: 60}
-    , margin2 = {top: 0, right: 30, bottom: 20, left: 60}
-    , color = nv.utils.defaultColor()
-    , width = null
-    , height = null
-    , height2 = 50
-    , useInteractiveGuideline = false
-    , x
-    , y
-    , x2
-    , y2
-    , showLegend = true
-    , brushExtent = null
-    , noData = null
-    , dispatch = d3.dispatch('brush', 'stateChange', 'changeState')
-    , transitionDuration = 250
-    , state = nv.utils.state()
-    , defaultState = null
-    ;
+    var margin = {top: 30, right: 30, bottom: 30, left: 60},
+	margin2 = {top: 0, right: 30, bottom: 20, left: 60},
+	color = nv.utils.defaultColor(),
+	width = null,
+	height = null,
+	height2 = 50,
+	useInteractiveGuideline = false,
+	x,
+	y,
+	x2,
+	y2,
+	showLegend = true,
+	brushExtent = null,
+	noData = null,
+	dispatch = d3.dispatch('brush', 'stateChange', 'changeState'),
+	transitionDuration = 250,
+	state = nv.utils.state(),
+	defaultState = null;
 
     lines.clipEdge(true).duration(0);
     lines2.interactive(false);
