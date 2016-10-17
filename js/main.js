@@ -1,3 +1,9 @@
+// Needed vars
+var validSteps;
+var lastExtent = [];
+var firstLoad = true;
+var first = true;
+
 /*Custom model based in LineWithFocusChart*/
 MyCustomChart = function() {
     "use strict";
@@ -812,6 +818,7 @@ var getNormalizedData = function getNormalizedData(framework_data) {
             validSteps.push(auxDate.getTime());
             return {'x': auxDate, 'y': dat};
         }.bind(this));
+
         series.push({
             values: dat,      //values - represents the array of {x,y} data points
             // key: label, //key  - the name of the series.
@@ -866,10 +873,10 @@ var paint = function paint(data) {
         chart.margin({"top":10,"bottom":14, "right":40});
 
         chart.xAxis.tickFormat(function(d) {
-            return this.format.date(new Date(d));
+            return //this.format.date(new Date(d));
         }.bind(this));
         chart.x2Axis.tickFormat(function(d) {
-            return this.format.date(new Date(d))
+            return //this.format.date(new Date(d))
         }.bind(this));
 
         chart.yAxis.tickFormat(function(d) {
@@ -927,7 +934,7 @@ var paint = function paint(data) {
                     var tEvent = new CustomEvent("rangeClose");
                     document.dispatchEvent(tEvent);
                 }
-                this.updateContext(extent.extent);
+                //this.updateContext(extent.extent);
             }.bind(this), 500);
         }.bind(this));
 
@@ -987,116 +994,8 @@ RangeNv.prototype.delete = function() {
     var rangeNv_dom = document.getElementById("fixed-chart");
     var rangeNv_metrics = [
         {
-            "values": [
-                0.5966769568622112,
-                0.9683617448899895,
-                0.5736363758333027,
-                0.7009576193522662,
-                0.15998542145825922,
-                0.508637759136036,
-                0.759652794804424,
-                0.5132142077200115,
-                0.4594250472728163,
-                0.33273247303441167,
-                0.030058797914534807,
-                0.7948863040655851,
-                0.624317214358598,
-                0.5884561631828547,
-                0.019016560167074203,
-                0.956395122455433,
-                0.7237868141382933,
-                0.113882502540946,
-                0.389601735631004,
-                0.2922046137973666,
-                0.3028266099281609,
-                0.03186552785336971,
-                0.5254538685549051,
-                0.9022018504329026,
-                0.6512108761817217,
-                0.37231862149201334,
-                0.008751642657443881,
-                0.7438864926807582,
-                0.18089947942644358,
-                0.7044435807038099,
-                0.05348323239013553,
-                0.47526864940300584,
-                0.05173218180425465,
-                0.7738808719441295,
-                0.07072291802614927,
-                0.1003110259771347,
-                0.3567163529805839,
-                0.41355186724103987,
-                0.29106423747725785,
-                0.9508458017371595,
-                0.656428198562935,
-                0.4753708243370056,
-                0.8683033566921949,
-                0.604866506299004,
-                0.8358124177902937,
-                0.6434795230161399,
-                0.14538440550677478,
-                0.20685624959878623,
-                0.5120464388746768,
-                0.12339830072596669,
-                0.00370257580652833,
-                0.612016347469762,
-                0.627319821389392,
-                0.7359956563450396,
-                0.11613209592178464,
-                0.8350023380480707,
-                0.9278828990645707,
-                0.7565393524710089,
-                0.5048994710668921,
-                0.5203659036196768
-            ],
-	    
-            "interval": {
-                "data_begin": 1432936800000,
-                "data_end": 1476452763000,
-                "from": 1432936800000,
-                "to": 1476452763000
-            },
-	    
-            "size": 60,
-            "max": 60,
-            "step": 725266050,
-            "timestamp": 1476452763000,
-            "info": {
-                "id": "director-activity",
-                "title": "Activity of Director",
-                "path": "/metrics/director-activity",
-                "params": [
-                    "uid"
-                ],
-                "optional": [
-                    "from",
-                    "to",
-                    "max",
-                    "accumulated",
-                    "aggr"
-                ],
-                "aggr": [
-                    "sum"
-                ],
-                "uid": {
-                    "uid": "1004",
-                    "name": "Francisco Javier Soriano",
-                    "nick": "jsoriano",
-                    "avatar": "https://pbs.twimg.com/profile_images/1652209779/Foto_Jefe_Estudios.jpg",
-                    "email": [
-                        "jsoriano@fi.upm.es"
-                    ],
-                    "firstcommit": null,
-                    "lastcommit": null,
-                    "register": null,
-                    "positionsByOrgId": {
-                        "1": [
-                            1
-                        ]
-                    }
-                }
-            }
-        }
+	    id: "director-activity"
+	}
     ];
 
     var rangeNv_configuration = {
@@ -1114,3 +1013,209 @@ RangeNv.prototype.delete = function() {
     var rangeNv = new RangeNv(rangeNv_dom, rangeNv_metrics, ["org-context", "current-user-context"], rangeNv_configuration);
     rangeNv.updateData(rangeNv_metrics);
 })();
+
+var buttonMode = false;
+var createDateControls = function createDateControls(container, theChart) {
+    // Calculate ranges
+    //var fullRange = theChart.x2Axis.domain(); //[1432936800000, 1467042160548]
+    /*var startWeek = moment(fullRange[1]).subtract(1, 'weeks').startOf('isoWeek');
+    var endWeek =   moment(fullRange[1]).subtract(1, 'weeks').endOf('isoWeek');
+    var weekRange = [startWeek.valueOf(), endWeek.valueOf()];
+    */
+    var aDay = 1000*60*60*24;
+    var aWeek = aDay*7;
+    var aMonth = aDay*30;
+    var aYear = aDay*365;
+
+
+    // Control Div
+    var rangeControlsDiv = document.createElement('div');
+    $(rangeControlsDiv).addClass('rangeControls');
+    $(container).append(rangeControlsDiv);
+    // All Range
+    var fullRange = theChart.x2Axis.domain();
+    var allRangeDiv = document.createElement('div');
+    allRangeDiv.addEventListener('click', function() {
+        destroyLeftRightControls('all');
+        theChart.setNewExtent.call(this, fullRange);
+    }.bind(this));
+    $(allRangeDiv).addClass('rangeButt allRange');
+    $(allRangeDiv).text('all');
+    rangeControlsDiv.appendChild(allRangeDiv);
+
+    // Week
+    var firstweekDay = moment(fullRange[1]).startOf('isoWeek').valueOf();
+    var lastWeekDay = moment(fullRange[1]).endOf('isoWeek').valueOf();
+    var weekRange = [firstweekDay, lastWeekDay];
+    var weekRangeN = getNormalExtent(weekRange);
+    if (weekRangeN) {
+        var lastWeekDiv = document.createElement('div');
+        lastWeekDiv.addEventListener('click', function() {
+            buttonMode = true;
+            currentControlPosition = 0;
+            destroyLeftRightControls('week');
+            addLeftRightControls.call(this, lastWeekDiv, 'week');
+            theChart.setNewExtent.call(this, weekRange);
+        }.bind(this));
+        $(lastWeekDiv).addClass('rangeButt weekRange');
+        $(lastWeekDiv).text('week');
+        rangeControlsDiv.appendChild(lastWeekDiv);
+    }
+
+    // Month
+    var fistInMonth = moment(fullRange[1]).startOf('month').valueOf();
+    var lastInMonth = moment(fullRange[1]).endOf('month').valueOf();
+    var monthRange = [fistInMonth, lastInMonth];
+    var monthRangeN = getNormalExtent(monthRange);
+    if (monthRangeN) {
+        var lastMonthDiv = document.createElement('div');
+        lastMonthDiv.addEventListener('click', function () {
+            buttonMode = true;
+            currentControlPosition = 0;
+            destroyLeftRightControls('month');
+            addLeftRightControls.call(this, lastMonthDiv, 'month');
+            theChart.setNewExtent.call(this, monthRange);
+        }.bind(this));
+        $(lastMonthDiv).addClass('rangeButt month');
+        $(lastMonthDiv).text('month');
+        rangeControlsDiv.appendChild(lastMonthDiv);
+    }
+
+    // Year
+    var firstInYear = moment(fullRange[1]).startOf('year').valueOf();
+    var lastInYear = moment(fullRange[1]).endOf('year').valueOf();
+    var yearRange = [firstInYear, lastInYear];
+    var yearRangeN = getNormalExtent(yearRange);
+    if (yearRangeN) {
+        var lastYearDiv = document.createElement('div');
+        lastYearDiv.addEventListener('click', function () {
+            currentControlPosition = 0;
+            buttonMode = true;
+            theChart.setNewExtent.call(this, yearRange);
+            destroyLeftRightControls('year');
+            addLeftRightControls.call(this, lastYearDiv, 'year');
+        }.bind(this));
+        $(lastYearDiv).addClass('rangeButt lastYear');
+        $(lastYearDiv).text('year');
+        rangeControlsDiv.appendChild(lastYearDiv);
+    }
+
+    var buttonBackup;
+    var butTimer;
+    var currentControlPosition = 0;
+    // range can be week, year, month strings
+    var addLeftRightControls = function leftRightControls(button, range) {
+        if (buttonBackup) {
+            return;
+        }
+        buttonMode = true;
+        // Go back
+        var newLeftDiv = document.createElement('div');
+        var leftIco = document.createElement('i');
+        $(leftIco).addClass("fa fa-angle-double-left");
+        $(newLeftDiv).addClass('extraButton goBack');
+        newLeftDiv.appendChild(leftIco);
+        var leftHandler = function () {
+            theChart.setNewExtent.call(this, goBackRange(range));
+        }.bind(this);
+        newLeftDiv.addEventListener('click', leftHandler);
+        // Go next
+        var newRightDiv = document.createElement('div');
+        var rightIco = document.createElement('i');
+        $(rightIco).addClass("fa fa-angle-double-right");
+        $(newRightDiv).addClass('extraButton goNext');
+        newRightDiv.appendChild(rightIco);
+        var rightHandler = function () {
+            theChart.setNewExtent.call(this, goNextRange(range));
+        }.bind(this);
+        newRightDiv.addEventListener('click', rightHandler);
+        // Extra controls container
+        var extraContainer = document.createElement('div');
+        $(extraContainer).addClass('moveButtonContainer');
+        extraContainer.appendChild(newLeftDiv);
+        extraContainer.appendChild(newRightDiv);
+        button.parentNode.appendChild(extraContainer);
+        var closeHandler = function (e) {
+            destroyLeftRightControls(null);
+            document.removeEventListener('rangeClose', closeHandler);
+        }
+        document.addEventListener('rangeClose', closeHandler);
+
+        // Hide range button
+        buttonBackup = {
+            'type': range,
+            'onButton': button,
+            'lHandler': leftHandler,
+            'rHandler': rightHandler,
+            'newLeftDiv': newLeftDiv,
+            'newRightDiv': newRightDiv
+        };
+        $(button).addClass('on');
+        if (butTimer) {
+            clearTimeout(butTimer); //cancel the previous timer.
+            timer = null;
+        }
+        butTimer = setTimeout(function() {
+            buttonMode = false;
+        }, 2000);
+    };
+
+    var destroyLeftRightControls = function destroyLeftRightControls(newRangeId) {
+        buttonMode = false;
+        currentControlPosition = 0;
+        if (!buttonBackup || newRangeId == buttonBackup.type) {
+            return;
+        }
+        buttonBackup.newLeftDiv.removeEventListener('click', buttonBackup.leftHandler);
+        buttonBackup.newRightDiv.removeEventListener('click', buttonBackup.rightHandler);
+        $(buttonBackup.onButton).removeClass('on');
+        var father = buttonBackup.newLeftDiv.parentNode;
+        father.removeChild(buttonBackup.newLeftDiv);
+        father.removeChild(buttonBackup.newRightDiv);
+        father.parentNode.removeChild(father);
+        buttonBackup = null;
+    };
+
+    var fullRange = theChart.x2Axis.domain();
+    var goBackRange = function goBackRange(range) {
+        buttonMode = true;
+        var rangeA = range;
+        if (range == "week") {
+            rangeA = "isoWeek"
+        }
+        currentControlPosition ++;
+        var startRange = moment(fullRange[1]).subtract(currentControlPosition, range).startOf(rangeA);
+        var endRange =   moment(fullRange[1]).subtract(currentControlPosition, range).endOf(rangeA);
+        buttonMode = true;
+        if (butTimer) {
+            clearTimeout(butTimer); //cancel the previous timer.
+            timer = null;
+        }
+        butTimer = setTimeout(function() {
+            buttonMode = false;
+        }, 2000);
+        return [startRange.valueOf(), endRange.valueOf()];
+    };
+
+    var goNextRange = function goNextRange(range) {
+        buttonMode = true;
+        if (currentControlPosition == 0) {
+            return;
+        }
+        var rangeA = range;
+        if (range == "week") {
+            rangeA = "isoWeek"
+        }
+        currentControlPosition --;
+        var startRange = moment(fullRange[1]).subtract(currentControlPosition, range).startOf(rangeA);
+        var endRange =   moment(fullRange[1]).subtract(currentControlPosition, range).endOf(rangeA);
+        if (butTimer) {
+            clearTimeout(butTimer); //cancel the previous timer.
+            timer = null;
+        }
+        butTimer = setTimeout(function() {
+            buttonMode = false;
+        }, 2000);
+        return [startRange.valueOf(), endRange.valueOf()];
+    };
+};
