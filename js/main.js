@@ -1,8 +1,177 @@
-// Needed vars
-var validSteps;
-var lastExtent = [];
-var firstLoad = true;
+var validSteps = [];
 var first = true;
+var lastExtent = [];
+
+// data:
+// [
+//     { values: [
+//      { x: "fecha ms", y: "dato" },
+//      { x: "fecha ms", y: "dato" },
+//      { x: "fecha ms", y: "dato" }
+//     ],
+//       labels: "Descripcion",
+//       area: "Boolean"
+//     }
+// ]
+var paint = function paint(data) {
+    // Creates the svg
+    var element = $("#fixed-chart");
+    element.append('<svg class="blurable"></svg>');
+    svg = element.children("svg");
+    svg.get(0).style.minHeight = "240px";
+    svg.get(0).style.backgroundColor = "rgba(0,0,0,0)";
+
+    nv.addGraph(function() {
+
+        if(this.status != 0) {
+            return; //Already initialized or destroyed
+        }
+
+        // By the moment taking default params
+        var chart = MyCustomChart()
+            .focusHeight(240*0.5)
+            .interpolate("linear")
+            .color(undefined)
+            .duration(250)
+            .showLegend(true)
+        // only affect to focus .How can i force Y axis in context chart?
+        // ... i don't know ...
+        //.forceY([this.maxY + 10, this.minY]);
+        this.chart = chart;
+
+        chart.margin({"top":10,"bottom":14, "right":40});
+
+        chart.xAxis.tickFormat(function(d) {
+            var dat = new Date(d);
+            return [dat.getFullYear(), dat.getMonth(), dat.getDay()].join('-');
+        }.bind(this));
+
+        chart.x2Axis.tickFormat(function(d) {
+            var dat = new Date(d);
+            return [dat.getFullYear(), dat.getMonth(), dat.getDay()].join('-');
+        }.bind(this));
+
+        chart.yAxis.tickFormat(function(d) {
+
+            //Truncate decimals
+            var pow =  Math.pow(10, 2);
+            d = Math.floor(d * pow) / pow;
+
+
+            if (d >= 1000 || d <= -1000) {
+                return Math.abs(d/1000) + " K";
+            } else {
+                return Math.abs(d);
+            }
+        }.bind(this));
+
+        chart.y2Axis.tickFormat(function(d) {
+
+            //Truncate decimals
+            var pow =  Math.pow(10, 2);
+            d = Math.floor(d * pow) / pow;
+
+
+            if (d >= 1000 || d <= -1000) {
+                return Math.abs(d/1000) + " K";
+            } else {
+                return Math.abs(d);
+            }
+        }.bind(this));
+
+        d3.select(this.svg.get(0))
+            .datum(data)
+            .call(chart);
+
+        var timer = null;
+        chart.dispatch.on('brush', function(extent){
+            if(JSON.stringify(this.lastExtent) == JSON.stringify(extent.extent)){
+                // Resize event causes a unwanted brush event in this chart
+                return;
+            }
+            if (timer) {
+                clearTimeout(timer); //cancel the previous timer.
+                timer = null;
+            }
+            timer = setTimeout(function() {
+                this.chart.brushExtent(extent.extent);
+                if (!firstLoad) {
+                    this.chart.updateBrushBG();
+                    this.chart.update();
+                }
+                firstLoad = false;
+                if (!buttonMode) {
+                    var tEvent = new CustomEvent("rangeClose");
+                    document.dispatchEvent(tEvent);
+                }
+                updateContext(extent.extent);
+            }.bind(this), 500);
+        }.bind(this));
+
+        //Update the chart when window resizes.
+        this.updateChart = this.chart.update; //This is important to get the reference because it changes!
+        $(window).resize(this.updateChart);
+
+        $(".nv-focus").attr("class", "nv-focus hidden");
+
+        // axis color
+        $(svg).find("[class~=nv-axisG]").attr('style', 'fill: "#000";')
+        // leyend color
+        $(svg).find("[class~=nv-legend-text]").attr('style', 'fill: "#000";')
+
+        // bigger brush cover
+        $(svg).find("[class~=nv-brushBackground] rect").attr('height', 98);
+        $(svg).find("[class~=nv-brushBackground] rect").attr('transform', 'translate(0,-4)');
+
+        //Call update to update the chart and threfore the context
+        chart.update();
+
+        // Set the chart as ready
+        this.status = 1;
+
+        createDateControls.call(this, element, chart);
+
+        return chart;
+    }.bind(this));
+
+};
+
+var updateContext = function updateContext(d) {
+    lastExtent = d;
+    setTimeInfo(d[0], d[1]);
+};
+
+var getNormalExtent = function getNormalExtent(extent) {
+    var e1 = 100000000000000000;
+    var e2 = 100000000000000000;
+    var newe1, newe2, dif;
+
+    // By the moment
+    var steps = [];
+
+    for (var data of validSteps[0]) {
+        steps.push(data.x);
+    }
+
+    for(var i=0; i < steps.length; i ++) {
+        dif = Math.abs(steps[i] - extent[0]);
+        if (dif < e1) {
+            newe1 = steps[i];
+            e1 = dif;
+        }
+        dif = Math.abs(steps[i] - extent[1]);
+        if (dif < e2) {
+            newe2 = steps[i];
+            e2 = dif;
+        }
+    }
+    //console.log("Normalized extent: " + [newe1, newe2]);
+    if (newe1 == newe2) {
+        return null;
+    } else {
+        return [newe1, newe2];
+    }
+};
 
 /*Custom model based in LineWithFocusChart*/
 MyCustomChart = function() {
@@ -12,34 +181,34 @@ MyCustomChart = function() {
     //------------------------------------------------------------
 
     var lines = nv.models.line(),
-        lines2 = nv.models.line(),
-        xAxis = nv.models.axis(),
-        yAxis = nv.models.axis(),
-        x2Axis = nv.models.axis(),
-        y2Axis = nv.models.axis(),
-        legend = nv.models.legend(),
-        brush = d3.svg.brush(),
-        tooltip = nv.models.tooltip(),
-        interactiveLayer = nv.interactiveGuideline();
+	lines2 = nv.models.line(),
+	xAxis = nv.models.axis(),
+	yAxis = nv.models.axis(),
+	x2Axis = nv.models.axis(),
+	y2Axis = nv.models.axis(),
+	legend = nv.models.legend(),
+	brush = d3.svg.brush(),
+	tooltip = nv.models.tooltip(),
+	interactiveLayer = nv.interactiveGuideline();
 
     var margin = {top: 30, right: 30, bottom: 30, left: 60},
-        margin2 = {top: 0, right: 30, bottom: 20, left: 60},
-        color = nv.utils.defaultColor(),
-        width = null,
-        height = null,
-        height2 = 50,
-        useInteractiveGuideline = false,
-        x,
-        y,
-        x2,
-        y2,
-        showLegend = true,
-        brushExtent = null,
-        noData = null,
-        dispatch = d3.dispatch('brush', 'stateChange', 'changeState'),
-        transitionDuration = 250,
-        state = nv.utils.state(),
-        defaultState = null;
+	margin2 = {top: 0, right: 30, bottom: 20, left: 60},
+	color = nv.utils.defaultColor(),
+	width = null,
+	height = null,
+	height2 = 50,
+	useInteractiveGuideline = false,
+	x,
+	y,
+	x2,
+	y2,
+	showLegend = true,
+	brushExtent = null,
+	noData = null,
+	dispatch = d3.dispatch('brush', 'stateChange', 'changeState'),
+	transitionDuration = 250,
+	state = nv.utils.state(),
+	defaultState = null;
 
     lines.clipEdge(true).duration(0);
     lines2.interactive(false);
@@ -401,6 +570,7 @@ MyCustomChart = function() {
               } else {
               console.log("No res: " + res)
               }
+
               setTimeout(function() {
               console.log("translate("+currentTrans+", 0)");
               gBrush.attr("transform", "translate("+currentTrans+", 0)");
@@ -593,434 +763,13 @@ MyCustomChart = function() {
     return chart;
 };
 
-
-var getNormalExtent = function getNormalExtent(extent) {
-    var e1 = 100000000000000000;
-    var e2 = 100000000000000000;
-    var newe1, newe2, dif;
-    for(var i=0; i < validSteps.length; i ++) {
-        dif = Math.abs(validSteps[i] - extent[0]);
-        if (dif < e1) {
-            newe1 = validSteps[i];
-            e1 = dif;
-        }
-        dif = Math.abs(validSteps[i] - extent[1]);
-        if (dif < e2) {
-            newe2 = validSteps[i];
-            e2 = dif;
-        }
-    }
-    //console.log("Normalized extent: " + [newe1, newe2]);
-    if (newe1 == newe2) {
-        return null;
-    } else {
-        return [newe1, newe2];
-    }
-};
-
-var normalizeConfig = function normalizeConfig(configuration) {
-    if (configuration == null) {
-        configuration = {};
-    }
-
-    if (typeof configuration.height != "number") {
-        configuration.height = 240;
-    }
-
-    if (typeof configuration.showFocus != "boolean") {
-        configuration.showFocus = true;
-    }
-
-    // nvd3 focusHeight is contextHeight
-    if (typeof configuration.focusHeight != "number") {
-        configuration.focusHeight = configuration.height * 0.5;
-        if (!configuration.showFocus) {
-            // -30 for leyend
-            configuration.focusHeight = configuration.height - 30;
-        }
-    }
-
-    if (typeof configuration.ownContext != "string") {
-        configuration.ownContext = "dafault_rangeNv_Context_id";
-    }
-
-    if (typeof configuration.isArea != "boolean") {
-        configuration.isArea = false;
-    }
-
-    if (typeof configuration.duration != "number") {
-        configuration.duration = 250;
-    }
-
-    if (typeof configuration.labelFormat != "string") {
-        configuration.labelFormat = "%mid%";
-    }
-
-    if (typeof configuration.interpolate != "string") {
-        configuration.interpolate = "linear";
-    }
-
-    if (typeof configuration.background != "string") {
-        configuration.background = "rgba(0,0,0,0)";
-    }
-
-    if (typeof configuration.axisColor != "string") {
-        configuration.axisColor = "#000";
-    }
-
-    if (typeof configuration.colors != "object") {
-        configuration.colors = undefined;
-    }
-
-    if (typeof configuration.showLegend != "boolean") {
-        configuration.showLegend = true;
-    }
-
-    if (typeof configuration.maxDecimals != "number") {
-        configuration.maxDecimals = 2;
-    }
-
-    if (typeof configuration.showDirectControls != "boolean") {
-        configuration.showDirectControls = true;
-    }
-
-    return configuration;
-};
-
-var RangeNv = function RangeNv(element, metrics, contextId, configuration) {
-    if (element == null) {
-        return;
-    }
-    // CHECK D3
-    if(typeof d3 === 'undefined') {
-        console.error("rangeNv could not be loaded because d3 did not exist.");
-        return;
-    }
-
-    // CHECK NVD3
-    if(typeof nv === 'undefined') {
-        console.error("rangeNv could not be loaded because nvd3 did not exist.");
-        return;
-    }
-
-    // We need relative position for the nvd3 tooltips
-    element.style.position = 'inherit';
-
-    this.element = $(element); //Store as jquery object
-    this.data = null;
-    this.chart = null;
-    this.labels = {};
-    this.lastExtent = [];
-    this.maxY = Number.MIN_VALUE;
-    this.minY = Number.MAX_VALUE;
-    this.maxT = -8640000000000000;
-    this.minT = 8640000000000000;
-    this.status = 0; // 0 - not initialized, 1 - ready, 2 - destroyed
-
-    // Configuration
-    this.configuration = normalizeConfig(configuration);
-
-    this.ownContext = configuration.ownContext;
-
-    this.element.append('<svg class="blurable"></svg>');
-    this.svg = this.element.children("svg");
-    this.svg.get(0).style.minHeight = this.configuration.height + "px";
-    this.svg.get(0).style.backgroundColor = this.configuration.background;
-};
-
-//Function that returns the value to replace with the label variables
-var replacer = function(resourceId, resource, str) {
-
-    //Remove the initial an trailing '%' of the string
-    str = str.substring(1, str.length-1);
-
-    //Check if it is a parameter an return its value
-    if(str === "resourceId") { //Special command to indicate the name of the resource
-        return resourceId;
-
-    } else { // Obtain its value through the object given the path
-
-        var path = str.split(".");
-        var subObject = resource;
-
-        for(var p = 0; p < path.length; ++p) {
-            if((subObject = subObject[path[p]]) == null)
-                return "";
-        }
-
-        return subObject.toString();
-    }
-
-};
-
-var normalizedStep = function(interval, step, index, dat) {
-    var from = moment(interval.from);
-    var to = moment(interval.to);
-    return;
-};
-
-var getNormalizedData = function getNormalizedData(framework_data) {
-    var labelVariable = /%(\w|\.)+%/g; //Regex that matches all the "variables" of the label such as %mid%, %pid%...
-
-    var series = [];
-    this.labels = {};
-    //var colors = ['#ff7f0e','#2ca02c','#7777ff','#D53E4F','#9E0142'];
-    //Data is represented as an array of {x,y} pairs.
-    for (var metricData of framework_data) {
-
-        // var metric = framework_data[metricId][m];
-        // var metricData = metric['data'];
-
-        if(metricData.interval.from < this.minT) {
-            this.minT = metricData.interval.from;
-        }
-        if(metricData.interval.to > this.maxT) {
-            this.maxT = metricData.interval.to;
-        }
-
-        var yserie = metricData.values;
-
-        // Create a replacer for this metric
-        // var metricReplacer = replacer.bind(null, metricId, metric);
-
-        // var genLabel = function genLabel(i) {
-        //     var lab = this.configuration.labelFormat.replace(labelVariable,metricReplacer);
-        //     if (i > 0) {
-        //         lab = lab + '(' + i + ')';
-        //     }
-        //     if (lab in this.labels) {
-        //         lab = genLabel.call(this, ++i);
-        //     }
-        //     this.labels[lab] = null;
-        //     return lab;
-        // };
-        //
-        //         // Generate the label by replacing the variables
-        //         var label = genLabel.call(this, 0);
-
-        // Metric dataset
-        validSteps = [];
-        var dat = yserie.map(function(dat, index) {
-
-            if(dat > this.maxY) {
-                this.maxY = dat;
-            }
-            if (dat < this.minY) {
-                this.minY = dat;
-            }
-
-            //We need to distribute the time of the step among all the "segments" of data so that the first
-            // value's date corresponds to the "from" date of the interval and the last value's date corresponds
-            // to the "to" date of the interval minus 1 second.
-            var distributedStep = index * (metricData.step - 1) / (metricData.values.length - 1);
-            var newD = normalizedStep(metricData.interval, metricData.step, index, dat);
-            var auxDate = new Date(metricData.interval.from + index * metricData.step + distributedStep);
-            validSteps.push(auxDate.getTime());
-            return {'x': auxDate, 'y': dat};
-        }.bind(this));
-
-        series.push({
-            values: dat,      //values - represents the array of {x,y} data points
-            // key: label, //key  - the name of the series.
-            area: this.configuration.isArea
-        });
-        if (series.length == 1) {
-            series[0]['bar'] = true
-        }
-    }
-
-
-    //Line chart data should be sent as an array of series objects.
-    return series;
-};
-
-RangeNv.prototype.updateData = function(framework_data) {
-
-    //Has been destroyed
-    if(this.status === 2)
-        return;
-
-    var normalizedData = getNormalizedData.call(this,framework_data);
-
-    //Update data
-    if(this.status === 1) {
-        d3.select(this.svg.get(0)).datum(normalizedData);
-
-    } else { // Paint it for first time
-        paint.call(this, normalizedData);
-    }
-
-};
-
-var paint = function paint(data) {
-    nv.addGraph(function() {
-
-        if(this.status != 0) {
-            return; //Already initialized or destroyed
-        }
-
-        var chart = MyCustomChart()
-            .focusHeight(this.configuration.focusHeight)
-            .interpolate(this.configuration.interpolate)
-            .color(this.configuration.colors)
-            .duration(this.configuration.duration)
-            .showLegend(this.configuration.showLegend)
-        // only affect to focus .How can i force Y axis in context chart?
-        // ... i don't know ...
-        //.forceY([this.maxY + 10, this.minY]);
-        this.chart = chart;
-
-        chart.margin({"top":10,"bottom":14, "right":40});
-
-        chart.xAxis.tickFormat(function(d) {
-            return //this.format.date(new Date(d));
-        }.bind(this));
-        chart.x2Axis.tickFormat(function(d) {
-            return //this.format.date(new Date(d))
-        }.bind(this));
-
-        chart.yAxis.tickFormat(function(d) {
-
-            //Truncate decimals
-            if(this.configuration.maxDecimals >= 0) {
-                var pow =  Math.pow(10, this.configuration.maxDecimals);
-                d = Math.floor(d * pow) / pow;
-            }
-
-            if (d >= 1000 || d <= -1000) {
-                return Math.abs(d/1000) + " K";
-            } else {
-                return Math.abs(d);
-            }
-        }.bind(this));
-
-        chart.y2Axis.tickFormat(function(d) {
-
-            //Truncate decimals
-            if(this.configuration.maxDecimals >= 0) {
-                var pow =  Math.pow(10, this.configuration.maxDecimals);
-                d = Math.floor(d * pow) / pow;
-            }
-
-            if (d >= 1000 || d <= -1000) {
-                return Math.abs(d/1000) + " K";
-            } else {
-                return Math.abs(d);
-            }
-        }.bind(this));
-
-        d3.select(this.svg.get(0))
-            .datum(data)
-            .call(chart);
-
-        var timer = null;
-        chart.dispatch.on('brush', function(extent){
-            if(JSON.stringify(this.lastExtent) == JSON.stringify(extent.extent)){
-                // Resize event causes a unwanted brush event in this chart
-                return;
-            }
-            if (timer) {
-                clearTimeout(timer); //cancel the previous timer.
-                timer = null;
-            }
-            timer = setTimeout(function() {
-                this.chart.brushExtent(extent.extent);
-                if (!firstLoad) {
-                    this.chart.updateBrushBG();
-                    this.chart.update();
-                }
-                firstLoad = false;
-                if (!buttonMode) {
-                    var tEvent = new CustomEvent("rangeClose");
-                    document.dispatchEvent(tEvent);
-                }
-                //this.updateContext(extent.extent);
-            }.bind(this), 500);
-        }.bind(this));
-
-        //Update the chart when window resizes.
-        this.updateChart = this.chart.update; //This is important to get the reference because it changes!
-        $(window).resize(this.updateChart);
-
-        if (!this.configuration.showFocus) {
-            $(".nv-focus").attr("class", "nv-focus hidden");
-        }
-        // axis color
-        $(this.svg).find("[class~=nv-axisG]").attr('style', 'fill:' + this.configuration.axisColor + ';')
-        // leyend color
-        $(this.svg).find("[class~=nv-legend-text]").attr('style', 'fill:' + this.configuration.axisColor + ';')
-
-        // bigger brush cover
-        $(this.svg).find("[class~=nv-brushBackground] rect").attr('height', 98);
-        $(this.svg).find("[class~=nv-brushBackground] rect").attr('transform', 'translate(0,-4)');
-
-        //Call update to update the chart and threfore the context
-        chart.update();
-
-        // Set the chart as ready
-        this.status = 1;
-
-        if (this.configuration.showDirectControls) {
-            createDateControls.call(this, this.element, chart);
-        }
-        return chart;
-    }.bind(this));
-
-};
-
-RangeNv.prototype.delete = function() {
-
-    // Has already been destroyed
-    if(this.status === 2)
-        return;
-
-    //Remove resize event listener
-    if(this.status === 1) {
-        $(window).off("resize", this.updateChart);
-    }
-
-    //Clear DOM
-    $(this.svg).empty();
-    this.element.empty();
-
-    this.svg = null;
-    this.chart = null;
-
-    //Update status
-    this.status = 2;
-};
-
-(function displayWidget() {
-    var rangeNv_dom = document.getElementById("fixed-chart");
-    var rangeNv_metrics = [
-        {
-	    id: "director-activity"
-	}
-    ];
-
-    var rangeNv_configuration = {
-        ownContext: "time-context",
-        isArea: true,
-        showLegend: false,
-        interpolate: 'monotone',
-        showFocus: false,
-        height: 140,
-        duration: 500,
-        colors: ["#004C8B"],
-        axisColor: "#004C8B"
-    };
-
-    var rangeNv = new RangeNv(rangeNv_dom, rangeNv_metrics, ["org-context", "current-user-context"], rangeNv_configuration);
-    rangeNv.updateData(rangeNv_metrics);
-})();
-
 var buttonMode = false;
 var createDateControls = function createDateControls(container, theChart) {
     // Calculate ranges
     //var fullRange = theChart.x2Axis.domain(); //[1432936800000, 1467042160548]
     /*var startWeek = moment(fullRange[1]).subtract(1, 'weeks').startOf('isoWeek');
-    var endWeek =   moment(fullRange[1]).subtract(1, 'weeks').endOf('isoWeek');
-    var weekRange = [startWeek.valueOf(), endWeek.valueOf()];
+      var endWeek =   moment(fullRange[1]).subtract(1, 'weeks').endOf('isoWeek');
+      var weekRange = [startWeek.valueOf(), endWeek.valueOf()];
     */
     var aDay = 1000*60*60*24;
     var aWeek = aDay*7;
@@ -1030,6 +779,7 @@ var createDateControls = function createDateControls(container, theChart) {
 
     // Control Div
     var rangeControlsDiv = document.createElement('div');
+    
     $(rangeControlsDiv).addClass('rangeControls');
     $(container).append(rangeControlsDiv);
     // All Range
@@ -1219,3 +969,175 @@ var createDateControls = function createDateControls(container, theChart) {
         return [startRange.valueOf(), endRange.valueOf()];
     };
 };
+
+// data:
+// [
+//     {
+//         values: [
+//             1, 2, 3, 4
+//         ],
+//
+//         interval: {
+//             data_begin: 219308171293, // Date
+//             data_end: 2362873018723,  // Date
+//             from: 219308171293,       // Same as data_begin
+//             to: 2362873018723         // Same as data_end
+//         },
+//         label: "label"
+//     },
+//     {
+//         values: [
+//             3, 12, 1, 9
+//         ],
+//         interval: {
+//             data_begin: 219308171293, // Date
+//             data_end: 2362873018723,  // Date
+//             from: 219308171293,       // Same as data_begin
+//             to: 2362873018723         // Same as data_end
+//         },
+//         label: "label2"
+//     }
+//
+// ]
+var normalizeData = function normalizeData(data) {
+    var normalized_data = [{}];
+
+    for (var i in data) {
+        var num_values = data[i].values.length;
+        var from = data[i].interval.from;
+        var to = data[i].interval.to;
+        var step = (to-from)/num_values;
+        var date = from;
+        normalized_data[i].values = [];
+        for (var j in data[i].values) {
+            normalized_data[i].values.push({ x: date, y: data[i].values[j] });
+            date += step;
+        }
+
+        normalized_data[i].label = data[i].label;
+    }
+
+    for (var metric of normalized_data) {
+        validSteps.push(metric.values);
+    }
+
+    paint(normalized_data);
+    return normalized_data;
+}
+
+// Test
+var test = [
+    {
+        "values": [
+            0.5966769568622112,
+            0.9683617448899895,
+            0.5736363758333027,
+            0.7009576193522662,
+            0.15998542145825922,
+            0.508637759136036,
+            0.759652794804424,
+            0.5132142077200115,
+            0.4594250472728163,
+            0.33273247303441167,
+            0.030058797914534807,
+            0.7948863040655851,
+            0.624317214358598,
+            0.5884561631828547,
+            0.019016560167074203,
+            0.956395122455433,
+            0.7237868141382933,
+            0.113882502540946,
+            0.389601735631004,
+            0.2922046137973666,
+            0.3028266099281609,
+            0.03186552785336971,
+            0.5254538685549051,
+            0.9022018504329026,
+            0.6512108761817217,
+            0.37231862149201334,
+            0.008751642657443881,
+            0.7438864926807582,
+            0.18089947942644358,
+            0.7044435807038099,
+            0.05348323239013553,
+            0.47526864940300584,
+            0.05173218180425465,
+            0.7738808719441295,
+            0.07072291802614927,
+            0.1003110259771347,
+            0.3567163529805839,
+            0.41355186724103987,
+            0.29106423747725785,
+            0.9508458017371595,
+            0.656428198562935,
+            0.4753708243370056,
+            0.8683033566921949,
+            0.604866506299004,
+            0.8358124177902937,
+            0.6434795230161399,
+            0.14538440550677478,
+            0.20685624959878623,
+            0.5120464388746768,
+            0.12339830072596669,
+            0.00370257580652833,
+            0.612016347469762,
+            0.627319821389392,
+            0.7359956563450396,
+            0.11613209592178464,
+            0.8350023380480707,
+            0.9278828990645707,
+            0.7565393524710089,
+            0.5048994710668921,
+            0.5203659036196768
+        ],
+
+        "interval": {
+            "data_begin": 1432936800000,
+            "data_end": 1476452763000,
+            "from": 1432936800000,
+            "to": 1476452763000
+        },
+
+        "size": 60,
+        "max": 60,
+        "step": 725266050,
+        "timestamp": 1476452763000,
+        "info": {
+            "id": "director-activity",
+            "title": "Activity of Director",
+            "path": "/metrics/director-activity",
+            "params": [
+                "uid"
+            ],
+            "optional": [
+                "from",
+                "to",
+                "max",
+                "accumulated",
+                "aggr"
+            ],
+            "aggr": [
+                "sum"
+            ],
+            "uid": {
+                "uid": "1004",
+                "name": "Francisco Javier Soriano",
+                "nick": "jsoriano",
+                "avatar": "https://pbs.twimg.com/profile_images/1652209779/Foto_Jefe_Estudios.jpg",
+                "email": [
+                    "jsoriano@fi.upm.es"
+                ],
+                "firstcommit": null,
+                "lastcommit": null,
+                "register": null,
+                "positionsByOrgId": {
+                    "1": [
+                        1
+                    ]
+                }
+            }
+        }
+    }
+]
+
+normalizeData(test);

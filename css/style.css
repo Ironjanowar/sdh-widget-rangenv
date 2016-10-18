@@ -60,9 +60,26 @@
 
 .extent {
   background: #217eff;
+  color: #217eff;
   opacity: 0.2;
 }
 
 .nv-brushBackground {
   opacity: 0;
+}
+
+/* Setting Pane */
+#fixed-chart {
+  width: 100%;
+  display: inline-block;
+  height: 100%;
+  margin-top: -18px;
+  margin-bottom: 10px;
+}
+
+/* specific style for the Fixed time chart */
+#fixed-chart .nvd3 .nv-brushBackground rect {
+  fill: #263C4A;
+  fill-opacity: 0.6;
+  stroke: rgba(0,0,0,0);
 }
