@@ -77,9 +77,33 @@
   margin-bottom: 10px;
 }
 
-/* specific style for the Fixed time chart */
+/* Specific style for the Fixed time chart */
 #fixed-chart .nvd3 .nv-brushBackground rect {
-  fill: #263C4A;
+  fill: #217eff;
   fill-opacity: 0.6;
   stroke: rgba(0,0,0,0);
+}
+
+/* Resize square style */
+.resize path, .resize rect {
+  fill: #808080;
+  stroke: #000000;
+}
+
+.resize rect {
+  opacity: 0.5;
+}
+
+/* Very needed */
+.nv-group .nv-line {
+  visibility: hidden;
+}
+
+#buttonbox {
+  margin-top: 3px;
+  margin-right: 2px;
+  margin-left: 12px;
+  float: right;
+  -webkit-transition: all 0.3s;
+  transition: all 0.3s;
 }

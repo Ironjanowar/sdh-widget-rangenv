@@ -1,6 +1,19 @@
 var validSteps = [];
 var first = true;
 var lastExtent = [];
+var firstLoad = true;
+
+var test_data = [
+    {
+        values: [
+            { x: 1476662400000, y: 0   }, // Monday
+            { x: 1476748800000, y: 0.6 }, // Tuesday
+            { x: 1476835200000, y: 0.8 }  // Wendsday
+        ],
+        key: "Test data",
+        area: true
+    }
+]
 
 // data:
 // [
@@ -9,15 +22,20 @@ var lastExtent = [];
 //      { x: "fecha ms", y: "dato" },
 //      { x: "fecha ms", y: "dato" }
 //     ],
-//       labels: "Descripcion",
+//       key: "Descripcion",
 //       area: "Boolean"
 //     }
 // ]
 var paint = function paint(data) {
+
+    this.data = data;
+
     // Creates the svg
     var element = $("#fixed-chart");
     element.append('<svg class="blurable"></svg>');
     svg = element.children("svg");
+    var svg_width = window.innerWidth - 100 - 200*2 // window.innerWidth - top - left*2
+    $("svg").css({top: 100, left: 200, width: svg_width, position:'absolute'});
     svg.get(0).style.minHeight = "240px";
     svg.get(0).style.backgroundColor = "rgba(0,0,0,0)";
 
@@ -109,15 +127,15 @@ var paint = function paint(data) {
         }.bind(this));
 
         //Update the chart when window resizes.
-        this.updateChart = this.chart.update; //This is important to get the reference because it changes!
-        $(window).resize(this.updateChart);
+        var updateChart = chart.update; //This is important to get the reference because it changes!
+        $(window).resize(updateChart);
 
         $(".nv-focus").attr("class", "nv-focus hidden");
 
         // axis color
-        $(svg).find("[class~=nv-axisG]").attr('style', 'fill: "#000";')
-        // leyend color
-        $(svg).find("[class~=nv-legend-text]").attr('style', 'fill: "#000";')
+        $(svg).find("[class~=nv-axisG]").attr('style', 'fill: "#000";');
+        // legend color
+        $(svg).find("[class~=nv-legend-text]").attr('style', 'color: "#000";');
 
         // bigger brush cover
         $(svg).find("[class~=nv-brushBackground] rect").attr('height', 98);
@@ -135,6 +153,11 @@ var paint = function paint(data) {
     }.bind(this));
 
 };
+
+// Test
+//validSteps.push(test_data.values);
+//
+//paint(test_data);
 
 var updateContext = function updateContext(d) {
     lastExtent = d;
@@ -181,34 +204,36 @@ MyCustomChart = function() {
     //------------------------------------------------------------
 
     var lines = nv.models.line(),
-	lines2 = nv.models.line(),
-	xAxis = nv.models.axis(),
-	yAxis = nv.models.axis(),
-	x2Axis = nv.models.axis(),
-	y2Axis = nv.models.axis(),
-	legend = nv.models.legend(),
-	brush = d3.svg.brush(),
-	tooltip = nv.models.tooltip(),
-	interactiveLayer = nv.interactiveGuideline();
+        lines2 = nv.models.line(),
+        xAxis = nv.models.axis(),
+        yAxis = nv.models.axis(),
+        x2Axis = nv.models.axis(),
+        y2Axis = nv.models.axis(),
+        legend = nv.models.legend(),
+        brush = d3.svg.brush(),
+        tooltip = nv.models.tooltip(),
+        interactiveLayer = nv.interactiveGuideline();
+
+    var chart_width = window.innerWidth - 100 - 200*2 // window.innerWidth - top - left*2
 
     var margin = {top: 30, right: 30, bottom: 30, left: 60},
-	margin2 = {top: 0, right: 30, bottom: 20, left: 60},
-	color = nv.utils.defaultColor(),
-	width = null,
-	height = null,
-	height2 = 50,
-	useInteractiveGuideline = false,
-	x,
-	y,
-	x2,
-	y2,
-	showLegend = true,
-	brushExtent = null,
-	noData = null,
-	dispatch = d3.dispatch('brush', 'stateChange', 'changeState'),
-	transitionDuration = 250,
-	state = nv.utils.state(),
-	defaultState = null;
+        margin2 = {top: 0, right: 30, bottom: 20, left: 60},
+        color = nv.utils.defaultColor(),
+        width = chart_width,
+        height = null,
+        height2 = 50,
+        useInteractiveGuideline = false,
+        x,
+        y,
+        x2,
+        y2,
+        showLegend = true,
+        brushExtent = null,
+        noData = null,
+        dispatch = d3.dispatch('brush', 'stateChange', 'changeState'),
+        transitionDuration = 250,
+        state = nv.utils.state(),
+        defaultState = null;
 
     lines.clipEdge(true).duration(0);
     lines2.interactive(false);
@@ -779,7 +804,7 @@ var createDateControls = function createDateControls(container, theChart) {
 
     // Control Div
     var rangeControlsDiv = document.createElement('div');
-    
+
     $(rangeControlsDiv).addClass('rangeControls');
     $(container).append(rangeControlsDiv);
     // All Range
@@ -862,6 +887,7 @@ var createDateControls = function createDateControls(container, theChart) {
         // Go back
         var newLeftDiv = document.createElement('div');
         var leftIco = document.createElement('i');
+        leftIco.append('Left');
         $(leftIco).addClass("fa fa-angle-double-left");
         $(newLeftDiv).addClass('extraButton goBack');
         newLeftDiv.appendChild(leftIco);
@@ -872,6 +898,7 @@ var createDateControls = function createDateControls(container, theChart) {
         // Go next
         var newRightDiv = document.createElement('div');
         var rightIco = document.createElement('i');
+        rightIco.append('Right')
         $(rightIco).addClass("fa fa-angle-double-right");
         $(newRightDiv).addClass('extraButton goNext');
         newRightDiv.appendChild(rightIco);
@@ -983,7 +1010,7 @@ var createDateControls = function createDateControls(container, theChart) {
 //             from: 219308171293,       // Same as data_begin
 //             to: 2362873018723         // Same as data_end
 //         },
-//         label: "label"
+//         key: "label"
 //     },
 //     {
 //         values: [
@@ -995,7 +1022,7 @@ var createDateControls = function createDateControls(container, theChart) {
 //             from: 219308171293,       // Same as data_begin
 //             to: 2362873018723         // Same as data_end
 //         },
-//         label: "label2"
+//         key: "label2"
 //     }
 //
 // ]
@@ -1013,8 +1040,8 @@ var normalizeData = function normalizeData(data) {
             normalized_data[i].values.push({ x: date, y: data[i].values[j] });
             date += step;
         }
-
-        normalized_data[i].label = data[i].label;
+        normalized_data[i].area = true;
+        normalized_data[i].key = data[i].key;
     }
 
     for (var metric of normalized_data) {
@@ -1026,7 +1053,7 @@ var normalizeData = function normalizeData(data) {
 }
 
 // Test
-var test = [
+test = [
     {
         "values": [
             0.5966769568622112,
@@ -1091,51 +1118,13 @@ var test = [
             0.5203659036196768
         ],
 
+        "key": "Test data",
+
         "interval": {
             "data_begin": 1432936800000,
             "data_end": 1476452763000,
             "from": 1432936800000,
             "to": 1476452763000
-        },
-
-        "size": 60,
-        "max": 60,
-        "step": 725266050,
-        "timestamp": 1476452763000,
-        "info": {
-            "id": "director-activity",
-            "title": "Activity of Director",
-            "path": "/metrics/director-activity",
-            "params": [
-                "uid"
-            ],
-            "optional": [
-                "from",
-                "to",
-                "max",
-                "accumulated",
-                "aggr"
-            ],
-            "aggr": [
-                "sum"
-            ],
-            "uid": {
-                "uid": "1004",
-                "name": "Francisco Javier Soriano",
-                "nick": "jsoriano",
-                "avatar": "https://pbs.twimg.com/profile_images/1652209779/Foto_Jefe_Estudios.jpg",
-                "email": [
-                    "jsoriano@fi.upm.es"
-                ],
-                "firstcommit": null,
-                "lastcommit": null,
-                "register": null,
-                "positionsByOrgId": {
-                    "1": [
-                        1
-                    ]
-                }
-            }
         }
     }
 ]
