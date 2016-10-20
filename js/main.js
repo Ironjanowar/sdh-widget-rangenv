@@ -103,15 +103,22 @@ var paint = function paint(data) {
 
         var timer = null;
         chart.dispatch.on('brush', function(extent){
-            if(JSON.stringify(this.lastExtent) == JSON.stringify(extent.extent)){
+            console.log("Timer -1");
+            console.log(JSON.stringify(lastExtent) == JSON.stringify(extent.extent))
+            if(JSON.stringify(lastExtent) == JSON.stringify(extent.extent)){
                 // Resize event causes a unwanted brush event in this chart
+                console.log("Timer 0");
                 return;
             }
+
             if (timer) {
+                console.log("Timer 1");
                 clearTimeout(timer); //cancel the previous timer.
                 timer = null;
             }
+
             timer = setTimeout(function() {
+                console.log("Timer on"); //In brush of timer
                 this.chart.brushExtent(extent.extent);
                 if (!firstLoad) {
                     this.chart.updateBrushBG();
@@ -151,7 +158,6 @@ var paint = function paint(data) {
 
         return chart;
     }.bind(this));
-
 };
 
 // Test
@@ -160,8 +166,8 @@ var paint = function paint(data) {
 //paint(test_data);
 
 var updateContext = function updateContext(d) {
+    console.log("Updating context");
     lastExtent = d;
-    setTimeInfo(d[0], d[1]);
 };
 
 var getNormalExtent = function getNormalExtent(extent) {
@@ -637,11 +643,13 @@ MyCustomChart = function() {
                 }
                 var nExtent = getNormalExtent(extent);
                 if (first) {
+                    console.log("###");
                     first = false;
                     dispatch.brush({extent: extent, brush: brush});
                 } else {
-                    if (nExtent[0] !== lastExtent[0] || nExtent[1] !== lastExtent[1] || fromPaint) {
-                        lastExtent = nExtent;
+                    console.log("IF: " + nExtent + ", " + lastExtent + ", " + fromPaint);
+                    if (nExtent !== null && lastExtent !== null && nExtent[0] !== lastExtent[0] || nExtent[1] !== lastExtent[1] || fromPaint) {
+                        //lastExtent = nExtent;
                         dispatch.brush({extent: nExtent, brush: brush});
                         updateBrushBG();
                     } else {
@@ -811,8 +819,10 @@ var createDateControls = function createDateControls(container, theChart) {
     var fullRange = theChart.x2Axis.domain();
     var allRangeDiv = document.createElement('div');
     allRangeDiv.addEventListener('click', function() {
+
         destroyLeftRightControls('all');
         theChart.setNewExtent.call(this, fullRange);
+        chart.update();
     }.bind(this));
     $(allRangeDiv).addClass('rangeButt allRange');
     $(allRangeDiv).text('all');
@@ -826,6 +836,7 @@ var createDateControls = function createDateControls(container, theChart) {
     if (weekRangeN) {
         var lastWeekDiv = document.createElement('div');
         lastWeekDiv.addEventListener('click', function() {
+            chart.update();
             buttonMode = true;
             currentControlPosition = 0;
             destroyLeftRightControls('week');
@@ -845,6 +856,7 @@ var createDateControls = function createDateControls(container, theChart) {
     if (monthRangeN) {
         var lastMonthDiv = document.createElement('div');
         lastMonthDiv.addEventListener('click', function () {
+            chart.update();
             buttonMode = true;
             currentControlPosition = 0;
             destroyLeftRightControls('month');
@@ -864,6 +876,7 @@ var createDateControls = function createDateControls(container, theChart) {
     if (yearRangeN) {
         var lastYearDiv = document.createElement('div');
         lastYearDiv.addEventListener('click', function () {
+            chart.update()
             currentControlPosition = 0;
             buttonMode = true;
             theChart.setNewExtent.call(this, yearRange);
@@ -892,6 +905,7 @@ var createDateControls = function createDateControls(container, theChart) {
         $(newLeftDiv).addClass('extraButton goBack');
         newLeftDiv.appendChild(leftIco);
         var leftHandler = function () {
+            chart.update();
             theChart.setNewExtent.call(this, goBackRange(range));
         }.bind(this);
         newLeftDiv.addEventListener('click', leftHandler);
@@ -903,6 +917,7 @@ var createDateControls = function createDateControls(container, theChart) {
         $(newRightDiv).addClass('extraButton goNext');
         newRightDiv.appendChild(rightIco);
         var rightHandler = function () {
+            chart.update();
             theChart.setNewExtent.call(this, goNextRange(range));
         }.bind(this);
         newRightDiv.addEventListener('click', rightHandler);
